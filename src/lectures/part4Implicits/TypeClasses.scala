@@ -24,10 +24,7 @@ object TypeClasses extends App {
     def serialize(user: User): String = s"<div>${user.name} </div>"
   }
 
-  //Type class loke like that
-  trait MyTypeClassTemplate[T]{
-    def action(value: T): String
-  }
+
 
 
 
@@ -54,36 +51,46 @@ object TypeClasses extends App {
   //access to the entire type class
   println(HTMLSerializer[User].serialize(robert))
 
+  //part 3
+
+  implicit class HTMLEnrichment[T](value: T){
+    def toHTML(implicit serializer: HTMLSerializer[T]): String = serializer.serialize(value)
+  }
+
+  println(john.toHTML(UserSerializer)) // println( new HTMLENRICHMENT[User](john).toHTML(UserSerializer))
+  println(john.toHTML)
+  //COOL!
   /*
-  Exercise: implement the TC pattern for the Equality TC.
+   - extend to new types
+   - choose implementation
+   - super expressive!
    */
 
-  /**
-    * Implement Equality
-    */
+  println(42.toHTML)
+  println(john.toHTML(PartialUserSerializer))
 
-  trait Equal[T] {
-    def apply(a: T, b: T): Boolean
+  /*
+   - type class itself --- HTMLSerializer[T]{ .. }
+   - type class instances (some of which are implicits) -- UserSerializer, IntSerializer
+   - conversion with implicit classes -- HTMLEnrichment
+   */
+
+  //context bounds
+  def htmlBoilerplate[T](content: T)(implicit serializer: HTMLSerializer[T]) :String =
+    s"<html><body> ${content.toHTML(serializer)}<body><html>"
+
+  def htmlSugar[T: HTMLSerializer](content: T): String = {
+    val serializer = implicitly[HTMLSerializer[T]]
+    s"<html><body> ${content.toHTML(serializer)}<body><html>"
   }
 
-  object Equal {
-    def apply[T](a: T, b: T)(implicit equalizer : Equal[T]): Boolean =
-      equalizer.apply(a, b)
-  }
+  //implicitly
 
-   object NameEquality extends Equal[User]{
-    override def apply(a: User, b: User): Boolean = a.name == b.name
-  }
+  case class Permissions(mask: String)
+  implicit val defaultPermissions: Permissions = Permissions("0744")
 
-  implicit object FullEquality extends Equal[User]{
-    override def apply(a: User, b: User): Boolean = a.name == b.name && a.email == b.email
-  }
-  implicit object IntEquality extends Equal[Int]{
-    override def apply(a: Int, b: Int): Boolean = a.equals(b)
-  }
-  val robert2 = User("Robert", 33, "test2@example.com")
+  //in some other part of the code
+  val standardPerms = implicitly[Permissions]
 
-  println(Equal(42, 42))
-  println(Equal(john, robert))
-//AD-HOC polymorphism ----^^
+
 }
